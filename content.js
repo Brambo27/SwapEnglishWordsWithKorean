@@ -38,6 +38,7 @@ function getNotesEnglish(rawNotes){
 function getNotes(){
     chrome.runtime.sendMessage({request: "getNotes"},
         function(response){
+        console.log(response);
             modifyDOM(getNotesEnglish(response.notes.result), getNotesKorean(response.notes.result))
         })
 }
