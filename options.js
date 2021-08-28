@@ -1,46 +1,147 @@
-let page = document.getElementById("buttonDiv");
-let selectedClassName = "current";
-const presetButtonColors = ["#3aa757", "#e8453c", "#f9bb2d", "#4688f1"];
+let selectElement = document.getElementById("selectAnkiDeck");
+let selectTranslateFrom = document.getElementById("selectTranslateFrom");
+let selectTranslateTo = document.getElementById("selectTranslateTo");
 
-// Reacts to a button click by marking the selected button and saving
-// the selection
-function handleButtonClick(event) {
-  // Remove styling from the previously selected color
-  let current = event.target.parentElement.querySelector(
-    `.${selectedClassName}`
-  );
-  if (current && current !== event.target) {
-    current.classList.remove(selectedClassName);
-  }
 
-  // Mark the button as selected
-  let color = event.target.dataset.color;
-  event.target.classList.add(selectedClassName);
-  chrome.storage.sync.set({ color });
+async function fetchAnkiDecks() {
+  let data = await fetch('http://127.0.0.1:8765/', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: "deckNames",
+      version: 6
+    })
+  }).then(response => response.json())
+  return data.result
 }
 
-// Add a button to the page for each supplied color
-function constructOptions(buttonColors) {
-  chrome.storage.sync.get("color", (data) => {
-    let currentColor = data.color;
-    // For each color we were provided…
-    for (let buttonColor of buttonColors) {
-      // …create a button with that color…
-      let button = document.createElement("button");
-      button.dataset.color = buttonColor;
-      button.style.backgroundColor = buttonColor;
+async function getFields(deckName) {
+  return await fetch('http://127.0.0.1:8765/', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: "findNotes",
+      version: 6,
+      params: {
+        query: `deck:${deckName}`
+      }
+    })
+  })
+      .then(response => response.json())
+      .then(response => {
+            return fetch('http://127.0.0.1:8765/', {
+              method: 'POST',
+              body: JSON.stringify({
+                action: "notesInfo",
+                version: 6,
+                params: {
+                  notes: [response.result[0]]
+                }
+              })
+            })
+                .then(response => {
+                  return response.json().then(value => {
+                    console.log(value.result[0].fields)
+                    return Object.keys(value.result[0].fields)
+                  })
+                });
+          }
+      )
+}
 
-      // …mark the currently selected color…
-      if (buttonColor === currentColor) {
-        button.classList.add(selectedClassName);
+function handleDeckSelectionChange(event) {
+  let ankiDeck = event.target.value;
+  chrome.storage.sync.set({ selectedDeck: ankiDeck });
+
+  getFields(ankiDeck).then(response => {
+    addOptionsToSelects(response);
+  })
+}
+
+async function addOptionsToSelects(fields) {
+  //We need to make sure the selects are clear before adding options
+  selectTranslateFrom.innerHTML = selectTranslateTo.innerHTML = '';
+  let selectedTranslateFromField = await getTranslateFromField()
+  let selectedTranslateToField = await getTranslateToField()
+
+  for (let field of fields) {
+    let option = document.createElement("option");
+    option.innerHTML = field
+    option.value = field
+    let optionClone = option.cloneNode(true);
+
+    if (field === selectedTranslateFromField){
+      option.selected = true
+    }
+
+    if (field === selectedTranslateToField){
+      optionClone.selected = true
+    }
+
+    selectTranslateFrom.appendChild(option);
+    selectTranslateTo.appendChild(optionClone)
+  }
+
+  let event = new Event('change');
+  selectTranslateFrom.dispatchEvent(event)
+  selectTranslateTo.dispatchEvent(event)
+
+}
+
+
+async function getTranslateFromField() {
+  return new Promise(resolve => {
+    chrome.storage.sync.get("selectedTranslateFromField", function (result) {
+      resolve(result.selectedTranslateFromField)
+    })
+  })
+}
+
+async function getTranslateToField() {
+  return new Promise(resolve => {
+    chrome.storage.sync.get("selectedTranslateToField", function (result) {
+      resolve(result.selectedTranslateToField)
+    })
+  })
+}
+
+function translateToSelectChangeHandler(ev) {
+  console.log(ev)
+  return chrome.storage.sync.set({selectedTranslateToField: ev.target.value});
+}
+
+function translateFromSelectChangeHandler(ev) {
+  console.log(ev)
+  return chrome.storage.sync.set({selectedTranslateFromField: ev.target.value});
+}
+
+async function constructOptions() {
+  let ankiDecks = await fetchAnkiDecks()
+
+  chrome.storage.sync.get("selectedDeck", (data) => {
+    let currentDeck = data.selectedDeck;
+
+    selectElement.addEventListener("change", handleDeckSelectionChange);
+    selectTranslateFrom.addEventListener("change", translateFromSelectChangeHandler);
+    selectTranslateTo.addEventListener("change", translateToSelectChangeHandler);
+
+
+
+
+    for (let deck of ankiDecks) {
+      let option = document.createElement("option");
+      option.innerHTML = deck;
+      option.value = deck.replaceAll(' ', '_');
+
+      if (deck.replaceAll(' ', '_') === currentDeck.replaceAll(' ', '_')) {
+        option.selected = true
       }
 
-      // …and register a listener for when that button is clicked
-      button.addEventListener("click", handleButtonClick);
-      page.appendChild(button);
+      selectElement.appendChild(option);
     }
+
+    getFields(currentDeck).then(response => {
+      addOptionsToSelects(response)
+    })
   });
 }
 
-// Initialize the page by constructing the color options
-constructOptions(presetButtonColors);
+constructOptions();

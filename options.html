@@ -4,11 +4,22 @@
     <link rel="stylesheet" href="button.css">
   </head>
   <body>
+  <div>
+    <p>Here you can choose what anki deck you would like to use</p>
+  </div>
     <div id="buttonDiv">
+      <select name="ankiDeck" id="selectAnkiDeck">
+
+      </select>
     </div>
-    <div>
-      <p>Choose a different background color!</p>
-    </div>
+
+  <div>
+    <p>Select the field to be translated from (e.g. english)</p>
+    <select name="translateFrom" id="selectTranslateFrom"></select>
+
+    <p>Select the field to be translated to (e.g. japanese)</p>
+    <select name="translateTo" id="selectTranslateTo"></select>
+  </div>
   </body>
   <script src="options.js"></script>
 </html>
