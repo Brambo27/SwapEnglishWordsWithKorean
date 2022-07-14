@@ -56,9 +56,10 @@ async function getNotes() {
         })
         .then(response => {
             return response.json().then(value => {
-                let simplifiedNotes = simplifyResults(value.result);
-                chrome.storage.local.set({notes: simplifiedNotes});
-                return simplifiedNotes;
+                return simplifyResults(value.result).then(simplifiedNotes => {
+                    chrome.storage.local.set({notes: simplifiedNotes});
+                    return simplifiedNotes
+                })
             })
         })
     )
@@ -72,26 +73,25 @@ async function getNotes() {
     });
 }
 
-function handleCommaSeparatedWords(rawNotes, translateFromField, translateToField) {
-    rawNotes.map(function (item, index){
-        console.log(item.fields)
-        console.log(item.fields[translateFromField])
-        if (item.fields[translateFromField].value.includes(',')){
-            let indexOfItem = index;
-            let newItems = item.fields[translateFromField].value.split(',');
-            newItems.forEach(value => {
-                rawNotes.splice(indexOfItem, index === indexOfItem /*als dit de eerste insert is delete 1*/, value)
-                indexOfItem++
-            })
-        }
-    })
-    return rawNotes;
-}
+// function handleCommaSeparatedWords(rawNotes, translateFromField, translateToField) {
+//     rawNotes.map(function (item, index){
+//         console.log(item.fields)
+//         console.log(item.fields[translateFromField])
+//         if (item.fields[translateFromField].value.includes(',')){
+//             let indexOfItem = index;
+//             let newItems = item.fields[translateFromField].value.split(',');
+//             newItems.forEach(value => {
+//                 rawNotes.splice(indexOfItem, index === indexOfItem /*als dit de eerste insert is delete 1*/, value)
+//                 indexOfItem++
+//             })
+//         }
+//     })
+//     return rawNotes;
+// }
 
 async function simplifyResults(result){
     let translateFromField = await getTranslateFromField();
     let translateToField = await getTranslateToField();
-
     return {English : getNotesFrom(result, translateFromField), Korean: getNotesTo(result, translateToField)}
 }
 
@@ -104,7 +104,7 @@ function getNotesTo(rawNotes, translateToField){
 
 function getNotesFrom(rawNotes, translateFromField){
     return rawNotes.map(function (item) {
-        item = item.fields[translateFromField].value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        item = item.fields[translateFromField].value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); //This regex is used to escape special characters
         if (item.includes(', ')){
             item = item.split(', ');
         }

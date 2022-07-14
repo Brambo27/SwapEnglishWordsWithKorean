@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/NewChromeExtention.iml" filepath="$PROJECT_DIR$/.idea/NewChromeExtention.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/AnkiSwapper.iml" filepath="$PROJECT_DIR$/.idea/AnkiSwapper.iml" />
     </modules>
   </component>
 </project>
